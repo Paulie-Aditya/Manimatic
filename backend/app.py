@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 from google import genai
 import os
+from gemini_functions import generate_manim_code
 
 load_dotenv()
 app = Flask(__name__)
@@ -20,10 +21,9 @@ def hello():
 @app.route("/generate", methods=["POST"])
 def generate():
     data = request.get_json()
-    prompt = data['prompt']
+    user_prompt = data['user_prompt']
     # add auth later (jwt/firebase)
-
-
+    generate_manim_code(user_prompt)
 
 if __name__ == '__main__':
     app.run(debug=True)

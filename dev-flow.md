@@ -1,7 +1,7 @@
 # Thought process while building this project:
 
 - Build backend first, then frontend
-- Backend: Python (Flask), Gemini , Manim
+- Backend: Python (Flask), Gemini , Manim, MongoDB , SQL
 - Frontend: Next.js, TailwindCSS, Shadcn ui
 
 ## Backend flow
@@ -27,6 +27,10 @@ next prompt: now from 5 to 6
 
 - solution is to preserve chat id ?
 
+manim is currently working on local
+so flow would be:
+hit api from frontend -> prompt goes through safety check prompt -> prompt goes to gemini (gen only manim code) -> manim code to be store in my-project/main.py -> (change prompt so that class name is static) -> run `manim -ql main.py`-> this vid should be uploaded to object storage -> give back url to frontend -> frontend renders the video
+
 ## Frontend flow
 
 - user auth (login/signup) (3 free hits then signup also can be done, this needs to be explored / provide test credentials for testing)
@@ -36,3 +40,14 @@ next prompt: now from 5 to 6
 - pricing page
 - credits viewer?
 - profile page
+
+## Chat preservation (prompt history)
+
+this needs to be implemented for better outputs and also such that users can view the chats again
+can use mongodb for this, nosql is better since relationship is not required + large outputs need to be stored
+identifier will be chat id, also will contain chat title
+
+## Safety check
+
+this is a blocker, since the code that will be generated will be run directly on os, the prompt needs to be safe, but figuring out a good prompt that passes safe prompts and discards unsafe ones is still to be figured out
+for sake of simplicity, ignoring this for now, but this is a high severity issue
