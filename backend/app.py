@@ -1,10 +1,12 @@
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 import os
+from flask_cors import CORS
 from gemini_functions import generate_manim_code
 
 load_dotenv()
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route("/ping", methods= ["GET"])
 def ping():
@@ -21,7 +23,7 @@ def generate():
     # add auth later (jwt/firebase)
     res, status = generate_manim_code(user_prompt)
     if(status == 200):
-        return jsonify({"message":"Success", "document_url":res}), 200
+        return jsonify({"message":"Success", "url":res}), 200
     else:
         return {"message":"some error occured"},status
 
