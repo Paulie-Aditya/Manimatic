@@ -21,7 +21,17 @@ def safety_check(user_prompt):
     response = model.generate_content(prompt).text
 
 def generate_manim_code(user_prompt):
-    prompt = f"""Generate the manim code for the following prompt, be sure to send back only the code and nothing else, be sure to put it in a class named Animation: {user_prompt}"""
+    prompt = f'''
+    "{user_prompt}\n\n"
+    "Generate valid and executable Python code for a Manim animation. "
+    "The code must:\n"
+    "- Start with all necessary imports (e.g., 'from manim import *').\n"
+    "- Define a class named 'Animation' that inherits from 'Scene' or any appropriate Scene subclass.\n"
+    "- Implement a 'construct' method inside the class with the animation logic.\n"
+    "- Be self-contained and syntactically correct.\n"
+    "- Return only the code, with no explanations, comments, or markdown formatting."
+    '''
+    
     response = model.generate_content(prompt).text
     # response will be generating in the following format: ```python {actual text}```
     response = response.strip("```python ").lstrip().rstrip().rstrip("```")
