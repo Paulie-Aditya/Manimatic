@@ -32,7 +32,8 @@ def generate_manim_code(user_prompt):
     # clear out log file before execution 
     with open(log_file, "w") as f:
         pass
-    os.system("manim -pql my-project/main.py --log_to_file")
+    
+    os.system("manim -ql my-project/main.py --log_to_file")
     while True:
         try:
             with open(log_file, "r") as f:
@@ -40,11 +41,13 @@ def generate_manim_code(user_prompt):
                 if(len(data) > 0):
                     pass
                 else:
+                    time.sleep(1)
                     continue
                 data = data.split("\n")
                 for curr in data:
+                    print(curr)
                     curr = eval(curr)
-                    if curr["module"] == "file_ops":
+                    if curr["module"] == "file_ops" or curr["module"] == "scene":
                         break
                     else:
                         time.sleep(1)
@@ -55,13 +58,13 @@ def generate_manim_code(user_prompt):
             continue
 
     #once done
-    file = "my-project/media/videos/main/480p15/Animation.mp4"
+    file = "media/videos/main/480p15/Animation.mp4"
     res, status = upload_doc(file)
     if status == 200 :
-        return res['document_url']
+        return res['document_url'],200
     else:
         return {"message":"some error occured"},status
 
-print(generate_manim_code("generate an animation of a square changing into a circle and then into a rectangle"))
+# print(generate_manim_code("generate an animation of a square changing into a circle and then into a rectangle"))
 
 # print(generate_manim_code("Generate an animation of a ball on a number line (1 to 100) going from 1 to 100 in increments of 1 then once the ball reaches 100, start over with increments of 3 continue this for all odd numbers upto 100, then once done, show increments of all even numbers"))
