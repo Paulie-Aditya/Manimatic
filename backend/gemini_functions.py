@@ -22,14 +22,18 @@ def safety_check(user_prompt):
 
 def generate_manim_code(user_prompt):
     prompt = f'''
-    "{user_prompt}\n\n"
-    "Generate valid and executable Python code for a Manim animation. "
-    "The code must:\n"
-    "- Start with all necessary imports (e.g., 'from manim import *').\n"
-    "- Define a class named 'Animation' that inherits from 'Scene' or any appropriate Scene subclass.\n"
-    "- Implement a 'construct' method inside the class with the animation logic.\n"
-    "- Be self-contained and syntactically correct.\n"
-    "- Return only the code, with no explanations, comments, or markdown formatting."
+    {user_prompt}
+
+    Generate valid and executable Python code for a Manim animation based strictly on the official Manim documentation (https://docs.manim.community). 
+
+    Instructions:
+    - Start with all required imports (e.g., 'from manim import *').
+    - Define a class named 'Animation' that inherits from 'Scene' or a relevant Scene subclass.
+    - Implement a 'construct' method containing the animation logic.
+    - Python code can contain explanations, if specified by user (as part of the animation itself, but should be non intrusive and non-overlapping)
+    - Do not assume any external assets (e.g., SVGs, images, audio). Everything must be created using Manim primitives, objects, and methods.
+    - The code must be fully self-contained, syntactically correct, and ready to run.
+    - Do not include explanations, comments, or markdown—only return the raw Python code 
     '''
     
     response = model.generate_content(prompt).text

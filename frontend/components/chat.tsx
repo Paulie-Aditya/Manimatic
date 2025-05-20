@@ -91,17 +91,15 @@ export function Chat() {
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">
-              <h3 className="text-lg font-medium">
-                Welcome to Prompt to Animation
-              </h3>
+              <h3 className="text-lg font-medium">Welcome to Manimatic</h3>
               <p className="text-sm text-gray-500">
                 Describe what you want to see, and I'll generate an animation
                 for you:
               </p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>"A butterfly flying through a forest"</li>
-                <li>"A rocket launching into space"</li>
-                <li>"A character dancing in the rain"</li>
+                <li>"What is a Neural Network?"</li>
+                <li>"Visualize Binary Search Algorithm"</li>
+                <li>"Explain Integration to me"</li>
               </ul>
             </div>
           </div>

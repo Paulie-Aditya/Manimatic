@@ -92,8 +92,8 @@ Manimatic is a web application that generates mathematical animations using natu
 
 ```bash
 # Clone the repository
-git clone https://github.com/Paulie-Aditya/Prompt-to-Animation.git
-cd Prompt-to-Animation/backend
+git clone https://github.com/Paulie-Aditya/Manimatic.git
+cd Manimatic/backend
 
 # Create virtual environment
 python -m venv venv
