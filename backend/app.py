@@ -19,7 +19,7 @@ def hello():
 @app.route("/generate", methods=["POST"])
 def generate():
     data = request.get_json()
-    user_prompt = data['user_prompt']
+    user_prompt = data['prompt']
     # add auth later (jwt/firebase)
     res, status = generate_manim_code(user_prompt)
     if(status == 200):

@@ -39,10 +39,10 @@ def generate_manim_code(user_prompt):
     response = model.generate_content(prompt).text
     # response will be generating in the following format: ```python {actual text}```
     response = response.strip("```python ").lstrip().rstrip().rstrip("```")
-    with open("my-project/main.py", "w") as file:
+    with open("./my-project/main.py", "w") as file:
         file.write(response)
     # this has to be saved to main.py and then run `manim -pql main.py`
-    log_file = "media/logs/main_Animation.log"
+    log_file = "./media/logs/main_Animation.log"
     # clear out log file before execution 
     with open(log_file, "w") as f:
         pass

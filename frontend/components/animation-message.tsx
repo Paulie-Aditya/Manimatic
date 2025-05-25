@@ -40,7 +40,7 @@ export function AnimationMessage({ message }: { message: AnimationMessageType })
       >
         {isUrl ? (
           <div className="flex flex-col items-center">
-            <p className="mb-2">Here's your animation:</p>
+            <p className="mb-2">✨ Your animation is ready!</p>
 
             {isLoading && (
               <div className="flex items-center justify-center h-40 w-full">
