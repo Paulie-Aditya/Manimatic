@@ -6,10 +6,18 @@ import time
 from flask import jsonify
 import time
 import shutil
-
+import re
+import glob
 load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-2.0-flash')
+model = genai.GenerativeModel('gemini-2.5-pro')
+
+
+def extract_code(gemini_response: str) -> str:
+    match = re.search(r"```python(.*?)```", gemini_response, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    raise ValueError("No Python code block found in Gemini response.")
 
 def safety_check(user_prompt):
     return
@@ -58,24 +66,41 @@ def generate_manim_code(user_prompt, job_id):
     os.makedirs(logs_dir, exist_ok=True)
     os.makedirs(code_dir, exist_ok=True)
 
+    # prompt = f'''
+    # {user_prompt}
+
+    # Generate valid and executable Python code for a Manim animation based strictly on the official Manim documentation (https://docs.manim.community). 
+
+    # Instructions:
+    # - Start with all required imports (e.g., 'from manim import *').
+    # - Define a class named 'Animation' that inherits from 'Scene' or a relevant Scene subclass.
+    # - Implement a 'construct' method containing the animation logic.
+    # - Python code can contain explanations, if specified by user (as part of the animation itself, but should be non intrusive and non-overlapping)
+    # - Do not assume any external assets (e.g., SVGs, images, audio). Everything must be created using Manim primitives, objects, and methods.
+    # - The code must be fully self-contained, syntactically correct, and ready to run.
+    # - Do not include explanations, comments, or markdown—only return the raw Python code 
+    # - NEVER INCLUDE ANY SORT OF EXPLANATION, only the CODE 
+    # '''
     prompt = f'''
     {user_prompt}
-
-    Generate valid and executable Python code for a Manim animation based strictly on the official Manim documentation (https://docs.manim.community). 
+    
+    You are a code generation assistant. Generate **valid and executable Manim Python code** for an animation based on the prompt above.
 
     Instructions:
-    - Start with all required imports (e.g., 'from manim import *').
+    - Use official Manim syntax from https://docs.manim.community.
+    - Output must include:
+    1. **Python Code** in a Markdown block (use triple backticks with ```python).
+    - Start code with required imports like `from manim import *`
     - Define a class named 'Animation' that inherits from 'Scene' or a relevant Scene subclass.
     - Implement a 'construct' method containing the animation logic.
-    - Python code can contain explanations, if specified by user (as part of the animation itself, but should be non intrusive and non-overlapping)
-    - Do not assume any external assets (e.g., SVGs, images, audio). Everything must be created using Manim primitives, objects, and methods.
-    - The code must be fully self-contained, syntactically correct, and ready to run.
-    - Do not include explanations, comments, or markdown—only return the raw Python code 
-    - NEVER INCLUDE ANY SORT OF EXPLANATION, only the CODE 
+    - All code should be self-contained (no external assets).
+    2. **Context or Explanation** (natural language text about the animation).
     '''
     
     response = model.generate_content(prompt).text
-    response = response.strip("```python ").lstrip().rstrip().rstrip("```")
+    print(response)
+    response = extract_code(response)
+    # response = response.strip("```python ").lstrip().rstrip().rstrip("```")
     code_path = f"{code_dir}/main.py"
     with open(code_path, "w") as file:
         file.write(response)
@@ -90,7 +115,7 @@ def generate_manim_code(user_prompt, job_id):
         print("Current time: ", curr_time)
         time_taken = curr_time-start_time
         print("Time taken till now: ", curr_time-start_time)
-        if(time_taken > 120):
+        if(time_taken > 60):
             # two mins taken
             return {"message": "some error occured"},500
         try:
@@ -114,7 +139,10 @@ def generate_manim_code(user_prompt, job_id):
         except:
             time.sleep(1)
             continue
-    video_file = f"{media_dir}/videos/main/480p15/Animation.mp4"
+    video_files = glob.glob(os.path.join(media_dir, "videos/main/480p15/*.mp4"))
+    if not video_files:
+        raise FileNotFoundError("No MP4 file found in the expected output folder.")
+    video_file = max(video_files, key=os.path.getmtime)
     res, status = upload_doc(video_file, job_id)
     print("Res: ", res)
     print("Status:", status)
