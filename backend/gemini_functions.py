@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from helper import upload_doc
 import time
 from flask import jsonify
+import time
+import shutil
 
 load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
@@ -19,8 +21,43 @@ def safety_check(user_prompt):
     This is the prompt you have to check: {system_prompt}
     """
     response = model.generate_content(prompt).text
+import subprocess
 
-def generate_manim_code(user_prompt):
+def run_manim_script(code_dir, media_dir):
+    manim_cmd = [
+        "manim",
+        "-ql",
+        f"{code_dir}/main.py",
+        "--log_to_file",
+        "--disable_caching",
+        "--media_dir",
+        media_dir
+    ]
+
+    print("Running:", " ".join(manim_cmd))
+
+    try:
+        result = subprocess.run(
+            manim_cmd,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        print("Manim stdout:\n", result.stdout.decode())
+        print("Manim stderr:\n", result.stderr.decode())
+    except subprocess.CalledProcessError as e:
+        print("Error running Manim:", e.stderr.decode())
+        raise RuntimeError("Manim execution failed") from e
+
+def generate_manim_code(user_prompt, job_id):
+    job_dir = f"./jobs/{job_id}"
+    media_dir = f"{job_dir}/media"
+    logs_dir = f"{media_dir}/logs"
+    code_dir = f"{job_dir}/code"
+
+    os.makedirs(logs_dir, exist_ok=True)
+    os.makedirs(code_dir, exist_ok=True)
+
     prompt = f'''
     {user_prompt}
 
@@ -34,21 +71,28 @@ def generate_manim_code(user_prompt):
     - Do not assume any external assets (e.g., SVGs, images, audio). Everything must be created using Manim primitives, objects, and methods.
     - The code must be fully self-contained, syntactically correct, and ready to run.
     - Do not include explanations, comments, or markdown—only return the raw Python code 
+    - NEVER INCLUDE ANY SORT OF EXPLANATION, only the CODE 
     '''
     
     response = model.generate_content(prompt).text
-    # response will be generating in the following format: ```python {actual text}```
     response = response.strip("```python ").lstrip().rstrip().rstrip("```")
-    with open("./my-project/main.py", "w") as file:
+    code_path = f"{code_dir}/main.py"
+    with open(code_path, "w") as file:
         file.write(response)
-    # this has to be saved to main.py and then run `manim -pql main.py`
-    log_file = "./media/logs/main_Animation.log"
-    # clear out log file before execution 
+    start_time = time.time()
+    log_file = f"{logs_dir}/main_Animation.log"
     with open(log_file, "w") as f:
         pass
-    
-    os.system("manim -ql my-project/main.py --log_to_file")
+    run_manim_script(code_dir, media_dir)
+
     while True:
+        curr_time = time.time()
+        print("Current time: ", curr_time)
+        time_taken = curr_time-start_time
+        print("Time taken till now: ", curr_time-start_time)
+        if(time_taken > 120):
+            # two mins taken
+            return {"message": "some error occured"},500
         try:
             with open(log_file, "r") as f:
                 data = f.read()
@@ -70,15 +114,12 @@ def generate_manim_code(user_prompt):
         except:
             time.sleep(1)
             continue
-
-    #once done
-    file = "media/videos/main/480p15/Animation.mp4"
-    res, status = upload_doc(file)
+    video_file = f"{media_dir}/videos/main/480p15/Animation.mp4"
+    res, status = upload_doc(video_file, job_id)
+    print("Res: ", res)
+    print("Status:", status)
     if status == 200 :
+        shutil.rmtree(job_dir)
         return res['document_url'],200
     else:
         return {"message":"some error occured"},status
-
-# print(generate_manim_code("generate an animation of a square changing into a circle and then into a rectangle"))
-
-# print(generate_manim_code("Generate an animation of a ball on a number line (1 to 100) going from 1 to 100 in increments of 1 then once the ball reaches 100, start over with increments of 3 continue this for all odd numbers upto 100, then once done, show increments of all even numbers"))

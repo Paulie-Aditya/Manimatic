@@ -19,12 +19,12 @@ def allowed_files(filename):
     return '.' in filename and \
         filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def upload_doc(file):
+def upload_doc(file, job_id):
     documentUrl = ""
     try:
         # file = "my-project/media/videos/main/480p15/Animation.mp4" # get from manim
         if file:
-            object_key = str(time.time()) + "/"+ file
+            object_key = str(time.time()) + "/"+ job_id
             upload_result = cloudinary.uploader.upload(file,public_id=object_key, resource_type = "video")
                 
             documentUrl = upload_result["secure_url"]
