@@ -101,7 +101,7 @@ export default function Home() {
           <Button
             variant="outline"
             onClick={handleGetStarted}
-            className="border-gray-700 text-gray-400 hover:bg-gray-900 hover:text-gray-200 transition-all duration-300"
+            className="border-gray-700 text-gray-400 hover:bg-gray-900 hover:text-gray-200 transition-all duration-300 bg-transparent"
           >
             Get Started
           </Button>
@@ -166,7 +166,7 @@ export default function Home() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-gray-700 text-gray-400 hover:bg-gray-900 hover:text-gray-200 px-8 py-4 text-lg"
+                  className="border-gray-700 text-gray-400 hover:bg-gray-900 hover:text-gray-200 px-8 py-4 text-lg bg-transparent"
                 >
                   <Play className="mr-2 h-5 w-5" />
                   Watch Demo
@@ -290,7 +290,9 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <item.icon className="h-10 w-10 text-gray-500 mx-auto mb-4" />
+                {item.icon && (
+                  <item.icon className="h-10 w-10 text-gray-500 mx-auto mb-4" />
+                )}
                 <h3 className="text-lg font-semibold text-gray-300 mb-2">
                   {item.title}
                 </h3>
@@ -311,7 +313,7 @@ export default function Home() {
             <h2 className="text-4xl font-bold text-gray-300 mb-4">
               What You Can Create
             </h2>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+            <p className="text-gray-500 text-lg mb-8 max-w-2xl mx-auto">
               From algorithms to physics, from biology to mathematics -
               visualize any concept
             </p>

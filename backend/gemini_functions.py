@@ -79,7 +79,7 @@ def generate_manim_code(user_prompt, job_id):
     - Define a class named 'Animation' that inherits from 'Scene' or a relevant Scene subclass.
     - Implement a 'construct' method containing the animation logic.
     - All code should be self-contained (no external assets).
-    2. **Context or Explanation** (natural language text about the animation).
+    2. **Context or Explanation** (natural language text about the prompt given by user).
     '''
     
     response = model.generate_content(prompt).text
@@ -102,7 +102,7 @@ def generate_manim_code(user_prompt, job_id):
         time_taken = curr_time-start_time
         if(time_taken > 60):
             # two mins taken
-            return {"message": "some error occured"},500
+            return None, explanation, code,500
         try:
             with open(log_file, "r") as f:
                 data = f.read()

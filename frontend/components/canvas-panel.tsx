@@ -2,9 +2,10 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { X, Code, Play, Copy, Check, Download, Maximize2 } from "lucide-react";
+import { X, Code, Play, Copy, Check, Maximize2 } from "lucide-react";
+import { FormattedText } from "@/lib/text-formatter";
 import type { Message } from "@/lib/store";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface CanvasPanelProps {
   message: Message;
@@ -15,6 +16,12 @@ export function CanvasPanel({ message, onClose }: CanvasPanelProps) {
   const [showCode, setShowCode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+
+  // Reset loading state when message changes
+  useEffect(() => {
+    setIsLoading(true);
+    setShowCode(false);
+  }, [message.id]);
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -58,15 +65,14 @@ export function CanvasPanel({ message, onClose }: CanvasPanelProps) {
   if (!message.animationData) return null;
 
   return (
-    <motion.div
-      initial={{ x: "100%", opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: "100%", opacity: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="h-full bg-black/90 backdrop-blur-sm border-l border-gray-900 flex flex-col"
-    >
+    <div className="h-full bg-black/90 backdrop-blur-sm border-l border-gray-900 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800 bg-black/60">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex items-center justify-between p-4 border-b border-gray-800 bg-black/60"
+      >
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-1">
             <div className="w-3 h-3 bg-red-500 rounded-full"></div>
@@ -120,14 +126,14 @@ export function CanvasPanel({ message, onClose }: CanvasPanelProps) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <Button
+                {/* <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleDownload}
                   className="text-gray-400 hover:text-gray-300 hover:bg-gray-800 h-8"
                 >
                   <Download className="h-4 w-4" />
-                </Button>
+                </Button> */}
               </motion.div>
 
               <motion.div
@@ -159,10 +165,15 @@ export function CanvasPanel({ message, onClose }: CanvasPanelProps) {
             </Button>
           </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Content */}
-      <div className="flex-1 p-4 overflow-auto">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        className="flex-1 p-4 overflow-auto"
+      >
         <AnimatePresence mode="wait">
           {showCode ? (
             <motion.div
@@ -174,9 +185,19 @@ export function CanvasPanel({ message, onClose }: CanvasPanelProps) {
               className="h-full"
             >
               <div className="bg-gray-950 rounded-lg p-4 border border-gray-800 h-full overflow-auto">
-                <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
-                  <code>{message.animationData.code}</code>
-                </pre>
+                {/* Check if code contains markdown formatting */}
+                {message.animationData.code?.includes("```") ||
+                message.animationData.code?.includes("**") ||
+                message.animationData.code?.includes("*") ? (
+                  <FormattedText
+                    text={message.animationData.code}
+                    className="text-sm text-gray-300 font-mono leading-relaxed"
+                  />
+                ) : (
+                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
+                    <code>{message.animationData.code}</code>
+                  </pre>
+                )}
               </div>
             </motion.div>
           ) : (
@@ -245,7 +266,7 @@ export function CanvasPanel({ message, onClose }: CanvasPanelProps) {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 }

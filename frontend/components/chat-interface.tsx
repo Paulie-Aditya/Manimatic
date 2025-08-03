@@ -39,12 +39,13 @@ export function ChatInterface({ onBackToLanding }: ChatInterfaceProps) {
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
       <PanelGroup direction="horizontal">
+        {/* Left Sidebar */}
         {!sidebarCollapsed && (
           <>
             <Panel
-              defaultSize={25}
+              defaultSize={20}
               minSize={15}
-              maxSize={45}
+              maxSize={35}
               onResize={(size) =>
                 setSidebarWidth((size / 100) * window.innerWidth)
               }
@@ -58,7 +59,19 @@ export function ChatInterface({ onBackToLanding }: ChatInterfaceProps) {
           </>
         )}
 
-        <Panel defaultSize={canvasPanelOpen ? 50 : sidebarCollapsed ? 100 : 75}>
+        {/* Main Chat Area */}
+        <Panel
+          defaultSize={
+            canvasPanelOpen
+              ? sidebarCollapsed
+                ? 50
+                : 40
+              : sidebarCollapsed
+              ? 100
+              : 80
+          }
+          minSize={30}
+        >
           <ChatArea
             sidebarCollapsed={sidebarCollapsed}
             onExpandSidebar={() => setSidebarCollapsed(false)}
@@ -67,10 +80,15 @@ export function ChatInterface({ onBackToLanding }: ChatInterfaceProps) {
           />
         </Panel>
 
+        {/* Right Canvas Panel */}
         {canvasPanelOpen && selectedMessage && (
           <>
             <PanelResizeHandle className="w-1 bg-gray-900 hover:bg-gray-800 transition-colors duration-300" />
-            <Panel defaultSize={50} minSize={30} maxSize={70}>
+            <Panel
+              defaultSize={sidebarCollapsed ? 50 : 40}
+              minSize={25}
+              maxSize={70}
+            >
               <CanvasPanel
                 message={selectedMessage}
                 onClose={handleCloseCanvas}
