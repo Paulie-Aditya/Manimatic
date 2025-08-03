@@ -22,12 +22,14 @@ def hello():
     return jsonify({"message": "Hello World"})
 
 def run_generation_thread(user_prompt, job_id):
-    data, status = generate_manim_code(user_prompt, job_id)
+    url, explanation, code, status = generate_manim_code(user_prompt, job_id)
 
     if status == 200:
         job_store[job_id] = {
             "status": "complete",
-            "url": data
+            "url": url,
+            "code": code,
+            "explanation":explanation
         }
     else:
         job_store[job_id] = {

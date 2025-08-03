@@ -8,28 +8,28 @@ import time
 import shutil
 import re
 import glob
+import subprocess
+
 load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-2.5-pro')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 
-def extract_code(gemini_response: str) -> str:
-    match = re.search(r"```python(.*?)```", gemini_response, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    raise ValueError("No Python code block found in Gemini response.")
+def extract_explanation_and_code(response):
+    code_match = re.search(r"```python(.*?)```", response, re.DOTALL)
+    if code_match:
+        code = code_match.group(1).strip()
+        explanation_before = response[:code_match.start()].strip()
+        explanation_after = response[code_match.end():].strip()
+        explanation = explanation_before + "\n\n" + explanation_after if explanation_before or explanation_after else ""
+    else:
+        code = ""
+        explanation = response.strip()
+    return explanation.strip(), code
 
 def safety_check(user_prompt):
     return
     # high severity, needs to be resolved before launch
-    system_prompt = f"""Generate the manim code for the following prompt, be sure to send back only the code and nothing else, be sure to put it in a class named Animation: {user_prompt}"""
-    
-    prompt = f"""
-    Check if a given prompt is safe to run directly on the operating system. Only respond with PASS if it is unquestionably safe and cannot modify files, execute system commands, or access the network. Respond with FAIL otherwise.
-    This is the prompt you have to check: {system_prompt}
-    """
-    response = model.generate_content(prompt).text
-import subprocess
 
 def run_manim_script(code_dir, media_dir):
     manim_cmd = [
@@ -42,7 +42,7 @@ def run_manim_script(code_dir, media_dir):
         media_dir
     ]
 
-    print("Running:", " ".join(manim_cmd))
+    # print("Running:", " ".join(manim_cmd))
 
     try:
         result = subprocess.run(
@@ -51,10 +51,10 @@ def run_manim_script(code_dir, media_dir):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-        print("Manim stdout:\n", result.stdout.decode())
-        print("Manim stderr:\n", result.stderr.decode())
+        # print("Manim stdout:\n", result.stdout.decode())
+        # print("Manim stderr:\n", result.stderr.decode())
     except subprocess.CalledProcessError as e:
-        print("Error running Manim:", e.stderr.decode())
+        # print("Error running Manim:", e.stderr.decode())
         raise RuntimeError("Manim execution failed") from e
 
 def generate_manim_code(user_prompt, job_id):
@@ -66,21 +66,6 @@ def generate_manim_code(user_prompt, job_id):
     os.makedirs(logs_dir, exist_ok=True)
     os.makedirs(code_dir, exist_ok=True)
 
-    # prompt = f'''
-    # {user_prompt}
-
-    # Generate valid and executable Python code for a Manim animation based strictly on the official Manim documentation (https://docs.manim.community). 
-
-    # Instructions:
-    # - Start with all required imports (e.g., 'from manim import *').
-    # - Define a class named 'Animation' that inherits from 'Scene' or a relevant Scene subclass.
-    # - Implement a 'construct' method containing the animation logic.
-    # - Python code can contain explanations, if specified by user (as part of the animation itself, but should be non intrusive and non-overlapping)
-    # - Do not assume any external assets (e.g., SVGs, images, audio). Everything must be created using Manim primitives, objects, and methods.
-    # - The code must be fully self-contained, syntactically correct, and ready to run.
-    # - Do not include explanations, comments, or markdown—only return the raw Python code 
-    # - NEVER INCLUDE ANY SORT OF EXPLANATION, only the CODE 
-    # '''
     prompt = f'''
     {user_prompt}
     
@@ -98,23 +83,23 @@ def generate_manim_code(user_prompt, job_id):
     '''
     
     response = model.generate_content(prompt).text
-    print(response)
-    response = extract_code(response)
-    # response = response.strip("```python ").lstrip().rstrip().rstrip("```")
+    explanation, code = extract_explanation_and_code(response)
+
     code_path = f"{code_dir}/main.py"
     with open(code_path, "w") as file:
-        file.write(response)
+        file.write(code)
     start_time = time.time()
     log_file = f"{logs_dir}/main_Animation.log"
     with open(log_file, "w") as f:
         pass
-    run_manim_script(code_dir, media_dir)
+    try:
+        run_manim_script(code_dir, media_dir)
+    except:
+        return None, explanation, code ,500
 
     while True:
         curr_time = time.time()
-        print("Current time: ", curr_time)
         time_taken = curr_time-start_time
-        print("Time taken till now: ", curr_time-start_time)
         if(time_taken > 60):
             # two mins taken
             return {"message": "some error occured"},500
@@ -128,7 +113,7 @@ def generate_manim_code(user_prompt, job_id):
                     continue
                 data = data.split("\n")
                 for curr in data:
-                    print(curr)
+                    # print(curr)
                     curr = eval(curr)
                     if curr["module"] == "file_ops" or curr["module"] == "scene":
                         break
@@ -139,15 +124,17 @@ def generate_manim_code(user_prompt, job_id):
         except:
             time.sleep(1)
             continue
+
     video_files = glob.glob(os.path.join(media_dir, "videos/main/480p15/*.mp4"))
     if not video_files:
+        return None, explanation, code ,500
         raise FileNotFoundError("No MP4 file found in the expected output folder.")
     video_file = max(video_files, key=os.path.getmtime)
     res, status = upload_doc(video_file, job_id)
-    print("Res: ", res)
-    print("Status:", status)
-    if status == 200 :
+    if os.path.exists(job_dir) and os.path.isdir(job_dir):
         shutil.rmtree(job_dir)
-        return res['document_url'],200
+    if status == 200 :
+        return res['document_url'], explanation, code, 200
     else:
-        return {"message":"some error occured"},status
+        return None, explanation, None,status
+    

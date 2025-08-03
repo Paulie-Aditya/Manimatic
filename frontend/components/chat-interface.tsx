@@ -1,19 +1,35 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels"
-import { ChatSidebar } from "./chat-sidebar"
-import { ChatArea } from "./chat-area"
-import { useChatStore } from "@/lib/store"
-import { useState } from "react"
+import { motion } from "framer-motion";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { ChatSidebar } from "./chat-sidebar";
+import { ChatArea } from "./chat-area";
+import { CanvasPanel } from "./canvas-panel";
+import { useChatStore } from "@/lib/store";
+import { useState } from "react";
+import type { Message } from "@/lib/store";
 
 interface ChatInterfaceProps {
-  onBackToLanding: () => void
+  onBackToLanding: () => void;
 }
 
 export function ChatInterface({ onBackToLanding }: ChatInterfaceProps) {
-  const { sidebarWidth, setSidebarWidth } = useChatStore()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const { sidebarWidth, setSidebarWidth } = useChatStore();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [canvasPanelOpen, setCanvasPanelOpen] = useState(false);
+
+  const handleMessageSelect = (message: Message) => {
+    if (message.animationData) {
+      setSelectedMessage(message);
+      setCanvasPanelOpen(true);
+    }
+  };
+
+  const handleCloseCanvas = () => {
+    setCanvasPanelOpen(false);
+    setSelectedMessage(null);
+  };
 
   return (
     <motion.div
@@ -29,22 +45,40 @@ export function ChatInterface({ onBackToLanding }: ChatInterfaceProps) {
               defaultSize={25}
               minSize={15}
               maxSize={45}
-              onResize={(size) => setSidebarWidth((size / 100) * window.innerWidth)}
+              onResize={(size) =>
+                setSidebarWidth((size / 100) * window.innerWidth)
+              }
             >
-              <ChatSidebar onCollapse={() => setSidebarCollapsed(true)} onBackToLanding={onBackToLanding} />
+              <ChatSidebar
+                onCollapse={() => setSidebarCollapsed(true)}
+                onBackToLanding={onBackToLanding}
+              />
             </Panel>
             <PanelResizeHandle className="w-1 bg-gray-900 hover:bg-gray-800 transition-colors duration-300" />
           </>
         )}
 
-        <Panel defaultSize={sidebarCollapsed ? 100 : 75}>
+        <Panel defaultSize={canvasPanelOpen ? 50 : sidebarCollapsed ? 100 : 75}>
           <ChatArea
             sidebarCollapsed={sidebarCollapsed}
             onExpandSidebar={() => setSidebarCollapsed(false)}
             onBackToLanding={onBackToLanding}
+            onMessageSelect={handleMessageSelect}
           />
         </Panel>
+
+        {canvasPanelOpen && selectedMessage && (
+          <>
+            <PanelResizeHandle className="w-1 bg-gray-900 hover:bg-gray-800 transition-colors duration-300" />
+            <Panel defaultSize={50} minSize={30} maxSize={70}>
+              <CanvasPanel
+                message={selectedMessage}
+                onClose={handleCloseCanvas}
+              />
+            </Panel>
+          </>
+        )}
       </PanelGroup>
     </motion.div>
-  )
+  );
 }

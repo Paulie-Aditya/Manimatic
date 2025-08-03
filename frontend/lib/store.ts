@@ -1,11 +1,13 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import type { AnimationResponse } from "./types"
 
 export interface Message {
   id: string
   role: "user" | "assistant"
   content: string
   timestamp: number
+  animationData?: AnimationResponse
 }
 
 export interface Chat {

@@ -1,42 +1,24 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { User, Bot } from "lucide-react"
-import type { Message } from "@/lib/store"
-import { useState } from "react"
+import { motion } from "framer-motion";
+import { User, Bot, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { Message } from "@/lib/store";
 
 interface ChatMessageProps {
-  message: Message
-  index: number
+  message: Message;
+  index: number;
+  onSelect?: (message: Message) => void;
 }
 
-export function ChatMessage({ message, index }: ChatMessageProps) {
-  const isUser = message.role === "user"
-  const [isLoading, setIsLoading] = useState(true)
+export function ChatMessage({ message, index, onSelect }: ChatMessageProps) {
+  const isUser = message.role === "user";
 
-  // Check if the message content is a URL (for assistant messages)
-  const isUrl = !isUser && message.content.startsWith("http")
-
-  // Determine media type based on URL extension
-  const getMediaType = (url: string) => {
-    const extension = url.split(".").pop()?.toLowerCase()
-
-    if (extension === "mp4" || extension === "webm" || extension === "mov") {
-      return "video"
-    } else if (extension === "gif") {
-      return "gif"
-    } else if (extension === "jpg" || extension === "jpeg" || extension === "png" || extension === "webp") {
-      return "image"
+  const handleViewCanvas = () => {
+    if (onSelect && message.animationData) {
+      onSelect(message);
     }
-
-    return "video"
-  }
-
-  const mediaType = isUrl ? getMediaType(message.content) : null
-
-  const handleLoad = () => {
-    setIsLoading(false)
-  }
+  };
 
   return (
     <motion.div
@@ -50,7 +32,11 @@ export function ChatMessage({ message, index }: ChatMessageProps) {
       }}
       className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
     >
-      <div className={`flex max-w-[80%] ${isUser ? "flex-row-reverse" : "flex-row"} items-start space-x-3`}>
+      <div
+        className={`flex max-w-[80%] ${
+          isUser ? "flex-row-reverse" : "flex-row"
+        } items-start space-x-3`}
+      >
         {/* Avatar */}
         <motion.div
           className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
@@ -61,83 +47,59 @@ export function ChatMessage({ message, index }: ChatMessageProps) {
           whileHover={{ scale: 1.1 }}
           transition={{ type: "spring", stiffness: 400, damping: 10 }}
         >
-          {isUser ? <User className="h-4 w-4 text-gray-400" /> : <Bot className="h-4 w-4 text-gray-500" />}
+          {isUser ? (
+            <User className="h-4 w-4 text-gray-400" />
+          ) : (
+            <Bot className="h-4 w-4 text-gray-500" />
+          )}
         </motion.div>
 
         {/* Message content */}
-        <motion.div
-          className={`rounded-2xl px-4 py-3 ${
-            isUser
-              ? "bg-gradient-to-r from-gray-800 to-gray-900 text-gray-300 border border-gray-700"
-              : "bg-gradient-to-r from-gray-900 to-black text-gray-400 border border-gray-800"
-          }`}
-          whileHover={{ scale: 1.01, y: -1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        >
-          {isUrl ? (
-            <div className="space-y-3">
-              <p className="text-sm text-gray-400">✨ Your visualization is ready</p>
+        <div className="flex-1 space-y-3">
+          {/* Main message bubble */}
+          <motion.div
+            className={`rounded-2xl px-4 py-3 ${
+              isUser
+                ? "bg-gradient-to-r from-gray-800 to-gray-900 text-gray-300 border border-gray-700"
+                : "bg-gradient-to-r from-gray-900 to-black text-gray-400 border border-gray-800"
+            }`}
+            whileHover={{ scale: 1.01, y: -1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
+            <p className="text-sm leading-relaxed">
+              {isUser
+                ? message.content
+                : message.animationData?.explanation || message.content}
+            </p>
+          </motion.div>
 
-              {isLoading && (
-                <div className="flex items-center justify-center h-40 w-full bg-black rounded-lg border border-gray-800">
-                  <motion.div
-                    className="w-8 h-8 border-4 border-gray-800 border-t-gray-600 rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                  />
-                </div>
-              )}
-
-              {mediaType === "video" && (
-                <video
-                  src={message.content}
-                  controls
-                  autoPlay
-                  loop
-                  className={`max-w-full rounded-lg border border-gray-800 ${isLoading ? "hidden" : "block"}`}
-                  style={{ maxHeight: "300px" }}
-                  onLoadedData={handleLoad}
-                >
-                  Your browser does not support the video tag.
-                </video>
-              )}
-
-              {mediaType === "gif" && (
-                <img
-                  src={message.content || "/placeholder.svg"}
-                  alt="Generated animation"
-                  className={`max-w-full rounded-lg border border-gray-800 ${isLoading ? "hidden" : "block"}`}
-                  style={{ maxHeight: "300px" }}
-                  onLoad={handleLoad}
-                />
-              )}
-
-              {mediaType === "image" && (
-                <img
-                  src={message.content || "/placeholder.svg"}
-                  alt="Generated image"
-                  className={`max-w-full rounded-lg border border-gray-800 ${isLoading ? "hidden" : "block"}`}
-                  style={{ maxHeight: "300px" }}
-                  onLoad={handleLoad}
-                />
-              )}
-
-              <motion.a
-                href={message.content}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block text-sm text-gray-500 hover:text-gray-400 underline transition-colors duration-200"
-                whileHover={{ scale: 1.05 }}
+          {/* Canvas preview button for assistant messages with animation data */}
+          {!isUser && message.animationData && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex justify-start"
+            >
+              <motion.div
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
-                Open in new tab
-              </motion.a>
-            </div>
-          ) : (
-            <p className="text-sm leading-relaxed">{message.content}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleViewCanvas}
+                  className="bg-gray-900/50 border-gray-800 text-gray-400 hover:bg-gray-800 hover:border-gray-700 hover:text-gray-300"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Animation & Code
+                </Button>
+              </motion.div>
+            </motion.div>
           )}
-        </motion.div>
+        </div>
       </div>
     </motion.div>
-  )
+  );
 }

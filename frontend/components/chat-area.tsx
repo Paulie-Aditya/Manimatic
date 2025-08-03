@@ -7,6 +7,8 @@ import { Send, Brain, PanelLeftOpen } from "lucide-react";
 import { useChatStore } from "@/lib/store";
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "./chat-message";
+import type { AnimationResponse } from "@/lib/types";
+import type { Message } from "@/lib/store";
 
 const SUGGESTED_QUESTIONS = [
   "What is a Neural Network?",
@@ -31,12 +33,14 @@ interface ChatAreaProps {
   sidebarCollapsed: boolean;
   onExpandSidebar: () => void;
   onBackToLanding: () => void;
+  onMessageSelect?: (message: Message) => void;
 }
 
 export function ChatArea({
   sidebarCollapsed,
   onExpandSidebar,
   onBackToLanding,
+  onMessageSelect,
 }: ChatAreaProps) {
   const {
     getCurrentChat,
@@ -113,7 +117,7 @@ export function ChatArea({
       if (!jobId) throw new Error("No job ID returned from server");
 
       // Step 2: Poll the status endpoint every 3 seconds
-      const pollAnimationUrl = async (): Promise<string> => {
+      const pollAnimationData = async (): Promise<AnimationResponse> => {
         while (true) {
           const statusRes = await fetch(`${backendUrl}/status/${jobId}`);
           if (!statusRes.ok)
@@ -121,23 +125,29 @@ export function ChatArea({
 
           const statusData = await statusRes.json();
 
-          if (statusData.status === "complete" && statusData.url) {
-            return statusData.url; // done
+          if (statusData.status === "complete") {
+            return {
+              status: "complete",
+              url: statusData.url,
+              code: statusData.code,
+              explanation: statusData.explanation,
+            };
           } else if (statusData.status === "failed") {
             throw new Error("Animation generation failed");
           }
 
           // else: pending or running, wait 3 seconds and retry
-          await new Promise((r) => setTimeout(r, 10000));
+          await new Promise((r) => setTimeout(r, 3000));
         }
       };
 
-      const animationUrl = await pollAnimationUrl();
+      const animationData = await pollAnimationData();
 
-      // Step 3: Add assistant message with animation URL
+      // Step 3: Add assistant message with animation data
       addMessage(chatId, {
         role: "assistant",
-        content: animationUrl,
+        content: animationData.explanation || "Your animation is ready!",
+        animationData,
       });
     } catch (err) {
       console.error("Error generating animation:", err);
@@ -366,7 +376,12 @@ export function ChatArea({
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <AnimatePresence>
           {currentChat.messages.map((message, index) => (
-            <ChatMessage key={message.id} message={message} index={index} />
+            <ChatMessage
+              key={message.id}
+              message={message}
+              index={index}
+              onSelect={onMessageSelect}
+            />
           ))}
         </AnimatePresence>
 
