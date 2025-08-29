@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  manimatic-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: manimatic-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - MONGODB_URI=${MONGODB_URI}
+    volumes:
+      # Mount for persistent job data (optional)
+      - ./backend/jobs:/app/jobs
+      # Mount for logs
+      - ./backend/logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - manimatic-network
+
+  # Optional: Add MongoDB if you want to run it locally
+  # mongodb:
+  #   image: mongo:6.0
+  #   container_name: manimatic-mongodb
+  #   ports:
+  #     - "27017:27017"
+  #   environment:
+  #     - MONGO_INITDB_ROOT_USERNAME=admin
+  #     - MONGO_INITDB_ROOT_PASSWORD=password
+  #   volumes:
+  #     - mongodb_data:/data/db
+  #   networks:
+  #     - manimatic-network
+
+networks:
+  manimatic-network:
+    driver: bridge
+# volumes:
+#   mongodb_data:
