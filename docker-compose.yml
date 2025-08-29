@@ -4,7 +4,7 @@ services:
   manimatic-backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.backend
     container_name: manimatic-backend
     ports:
       - "5000:5000"
@@ -18,8 +18,8 @@ services:
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
       - MONGODB_URI=${MONGODB_URI}
     volumes:
-      # Mount for persistent job data (optional)
-      - ./backend/jobs:/app/jobs
+      # Mount Docker socket for container management
+      - /var/run/docker.sock:/var/run/docker.sock
       # Mount for logs
       - ./backend/logs:/app/logs
     restart: unless-stopped
@@ -29,6 +29,21 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - manimatic-network
+    depends_on:
+      - manimatic-worker
+
+  manimatic-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: manimatic-worker
+    image: manimatic-worker:latest
+    # Worker containers are ephemeral and don't need to run continuously
+    # They are spawned by the backend as needed
+    profiles:
+      - build-only
     networks:
       - manimatic-network
 

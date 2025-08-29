@@ -2,16 +2,19 @@ from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 import os
 from flask_cors import CORS
-from gemini_functions import generate_manim_code
+from gemini_functions import generate_manim_code_safe
 import uuid 
 import threading
-
+import docker
+import json
+from helper import cleanup_text
 
 load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 job_store={}
+client = docker.from_env()
 
 @app.route("/ping", methods= ["GET"])
 def ping():
@@ -22,18 +25,63 @@ def hello():
     return jsonify({"message": "Hello World"})
 
 def run_generation_thread(user_prompt, job_id):
-    url, explanation, code, status = generate_manim_code(user_prompt, job_id)
-
-    if status == 200:
+    try:
+        explanation, code = generate_manim_code_safe(user_prompt, job_id)
+        
+        if not code:
+            job_store[job_id] = {"status": "failed", "error": "Failed to generate code"}
+            return
+        
+        # Spawn worker container
+        container = client.containers.run(
+            "manimatic-worker:latest",
+            detach=True,
+            environment={
+                "JOB_ID": job_id,
+                "CODE": code,
+                "EXPLANATION": explanation,
+                "CLOUDINARY_CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME"),
+                "CLOUDINARY_API_KEY": os.getenv("CLOUDINARY_API_KEY"),
+                "CLOUDINARY_API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
+            },
+            remove=True,
+            mem_limit="2g",
+            network_disabled=True,
+            read_only=True,
+            tmpfs={'/tmp': 'rw,noexec,nosuid,size=100m'}
+        )
+        
+        result = container.wait()
+        logs = container.logs().decode('utf-8')
+        
+        try:
+            lines = logs.strip().split('\n')
+            for line in reversed(lines):
+                if line.strip().startswith('{') and line.strip().endswith('}'):
+                    worker_result = json.loads(line)
+                    if worker_result.get('status') == 'success':
+                        job_store[job_id] = {
+                            "status": "complete",
+                            "url": worker_result.get('url'),
+                            "code": worker_result.get('code'),
+                            "explanation": cleanup_text(worker_result.get('explanation'))
+                        }
+                        return
+                    else:
+                        job_store[job_id] = {
+                            "status": "failed",
+                            "error": worker_result.get('error', 'Unknown error')
+                        }
+                        return
+        except json.JSONDecodeError:
+            job_store[job_id] = {
+                "status": "failed",
+                "error": "Failed to parse worker output"
+            }
+    except Exception as e:
         job_store[job_id] = {
-            "status": "complete",
-            "url": url,
-            "code": code,
-            "explanation":explanation
-        }
-    else:
-        job_store[job_id] = {
-            "status": "failed"
+            "status": "failed",
+            "error": str(e)
         }
 
 @app.route("/generate", methods=["POST"])
