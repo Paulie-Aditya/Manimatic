@@ -35,7 +35,7 @@ def upload_doc(file, job_id):
         else:
             return {
                 "message": "Invalid file mime type",
-                "error_msg": str(e)
+                "error_msg": "error"
             }, 400
         return {"message": "Document uploaded successfully",
                 "document_url": documentUrl,
@@ -89,7 +89,6 @@ def main():
     """Main worker function."""
     job_id = os.getenv('JOB_ID')
     code = os.getenv('CODE')
-    explanation = os.getenv('EXPLANATION')
     
     if not job_id or not code:
         print("Missing required environment variables: JOB_ID or CODE", file=sys.stderr)
@@ -98,7 +97,7 @@ def main():
     print(f"Starting job {job_id}")
     
     # Setup directories
-    job_dir = f"./jobs/{job_id}"
+    job_dir = f"/tmp/{job_id}"
     media_dir = f"{job_dir}/media"
     code_dir = f"{job_dir}/code"
     
@@ -144,7 +143,6 @@ def main():
             "job_id": job_id,
             "url": cloudinary_url,
             "code": code,
-            "explanation": explanation
         }
         
         print(json.dumps(result))

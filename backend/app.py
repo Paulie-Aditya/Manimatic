@@ -30,29 +30,50 @@ def run_generation_thread(user_prompt, job_id):
         if not code:
             job_store[job_id] = {"status": "failed", "error": "Failed to generate code"}
             return
-        
-        # Spawn worker container
-        container = client.containers.run(
-            "manimatic-worker:latest",
-            detach=True,
-            environment={
-                "JOB_ID": job_id,
-                "CODE": code,
-                "EXPLANATION": explanation,
-                "CLOUDINARY_CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME"),
-                "CLOUDINARY_API_KEY": os.getenv("CLOUDINARY_API_KEY"),
-                "CLOUDINARY_API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
-            },
-            remove=False,
-            mem_limit="2g",
-            network_disabled=True,
-            read_only=True,
-            tmpfs={'/tmp': 'rw,noexec,nosuid,size=100m'}
-        )        
-        # Wait for process to complete
-        exit_status = container.wait()
+        try:
+            client.images.get("manimatic-worker:latest")
+        except:
+            job_store[job_id] = {"status": "failed", "error": "Worker image not found. Please build it first."}
+            return
 
-        # Always grab logs *before* removing
+        # Spawn worker container
+        try:
+            print(f"Creating container for job {job_id}")
+            container = client.containers.run(
+                "manimatic-worker:latest",
+                detach=True,
+                environment={
+                    "JOB_ID": job_id,
+                    "CODE": code,
+                    "CLOUDINARY_CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME"),
+                    "CLOUDINARY_API_KEY": os.getenv("CLOUDINARY_API_KEY"),
+                    "CLOUDINARY_API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
+                },
+                remove=False,
+                mem_limit="2g",
+                # network_disabled=True,
+                read_only=True,
+                tmpfs={'/tmp': 'rw,noexec,nosuid,size=100m'}
+            )
+            print(f"Container created: {container.id}")
+        except Exception as e:
+            print(f"Failed to create container: {e}")
+            job_store[job_id] = {"status": "failed", "error": f"Container creation failed: {str(e)}"}
+            return
+        if not container:
+            job_store[job_id] = {"status": "failed", "error": "Container creation returned None"}
+            return
+        # Wait for process to complete
+        try:
+            result = container.wait(timeout=300)
+        except Exception:
+            # Timeout reached → kill container
+            container.kill()
+            job_store[job_id] = {
+                "status": "failed",
+                "error": "Timeout error"
+            }
+
         logs = container.logs(stdout=True, stderr=True).decode('utf-8')
 
         # Clean up container manually
@@ -70,7 +91,7 @@ def run_generation_thread(user_prompt, job_id):
                             "status": "complete",
                             "url": worker_result.get('url'),
                             "code": worker_result.get('code'),
-                            "explanation": worker_result.get('explanation')
+                            "explanation": explanation
                         }
                         return
                     else:
