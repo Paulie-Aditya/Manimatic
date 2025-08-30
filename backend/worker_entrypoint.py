@@ -1,17 +1,14 @@
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
-from helper import upload_doc
 import time
 from flask import jsonify
-import time
 import shutil
 import re
 import glob
 import subprocess
 import sys
 import json
-from helper import upload_doc
 import cloudinary
 import cloudinary.uploader
 
@@ -26,7 +23,6 @@ cloudinary.config(
 def upload_doc(file, job_id):
     documentUrl = ""
     try:
-        # file = "my-project/media/videos/main/480p15/Animation.mp4" # get from manim
         if file:
             object_key = str(time.time()) + "/"+ job_id
             upload_result = cloudinary.uploader.upload(file,public_id=object_key, resource_type = "video")
@@ -65,7 +61,7 @@ def run_manim_script(code_dir, media_dir):
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=300  # 5 minute timeout
+            timeout=240 # 5 minute timeout
         )
         print("Manim execution successful")
         return True

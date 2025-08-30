@@ -66,6 +66,12 @@ def run_generation_thread(user_prompt, job_id):
         # Wait for process to complete
         try:
             result = container.wait(timeout=300)
+            if result['StatusCode'] != 0:
+                logs = container.logs(stdout=True, stderr=True).decode('utf-8')
+                print(f"Container failed with exit code {result['StatusCode']}")
+                print(f"Container logs: {logs}")
+                job_store[job_id] = {"status": "failed", "error": f"Container failed with exit code {result['StatusCode']}"}
+                return
         except Exception:
             # Timeout reached → kill container
             container.kill()
