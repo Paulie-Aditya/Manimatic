@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   manimatic-backend:
     build:
@@ -18,10 +16,12 @@ services:
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
       - MONGODB_URI=${MONGODB_URI}
     volumes:
-      # Mount Docker socket for container management
+      # Mount Docker socket so backend can spawn worker containers
       - /var/run/docker.sock:/var/run/docker.sock
-      # Mount for logs
+      # Logs
       - ./backend/logs:/app/logs
+      # Jobs (backend and workers share this dir)
+      - ./backend/jobs:/app/jobs
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/ping"]
@@ -31,23 +31,23 @@ services:
       start_period: 40s
     networks:
       - manimatic-network
-    depends_on:
-      - manimatic-worker
 
+  # Worker image definition (not run by default)
   manimatic-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile.worker
-    container_name: manimatic-worker
     image: manimatic-worker:latest
-    # Worker containers are ephemeral and don't need to run continuously
-    # They are spawned by the backend as needed
+    # Do not auto-run this container — backend will `docker run --rm manimatic-worker`
     profiles:
       - build-only
     networks:
       - manimatic-network
+    volumes:
+      - ./backend/jobs:/job/jobs
+      - ./backend/logs:/job/logs
 
-  # Optional: Add MongoDB if you want to run it locally
+  # Optional: MongoDB
   # mongodb:
   #   image: mongo:6.0
   #   container_name: manimatic-mongodb
@@ -64,5 +64,3 @@ services:
 networks:
   manimatic-network:
     driver: bridge
-# volumes:
-#   mongodb_data:

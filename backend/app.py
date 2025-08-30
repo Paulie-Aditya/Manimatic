@@ -7,7 +7,6 @@ import uuid
 import threading
 import docker
 import json
-from helper import cleanup_text
 
 load_dotenv()
 app = Flask(__name__)
@@ -44,16 +43,23 @@ def run_generation_thread(user_prompt, job_id):
                 "CLOUDINARY_API_KEY": os.getenv("CLOUDINARY_API_KEY"),
                 "CLOUDINARY_API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
             },
-            remove=True,
+            remove=False,
             mem_limit="2g",
             network_disabled=True,
             read_only=True,
             tmpfs={'/tmp': 'rw,noexec,nosuid,size=100m'}
-        )
-        
-        result = container.wait()
-        logs = container.logs().decode('utf-8')
-        
+        )        
+        # Wait for process to complete
+        exit_status = container.wait()
+
+        # Always grab logs *before* removing
+        logs = container.logs(stdout=True, stderr=True).decode('utf-8')
+
+        # Clean up container manually
+        try:
+            container.remove(force=True)
+        except Exception:
+            pass
         try:
             lines = logs.strip().split('\n')
             for line in reversed(lines):
@@ -64,7 +70,7 @@ def run_generation_thread(user_prompt, job_id):
                             "status": "complete",
                             "url": worker_result.get('url'),
                             "code": worker_result.get('code'),
-                            "explanation": cleanup_text(worker_result.get('explanation'))
+                            "explanation": worker_result.get('explanation')
                         }
                         return
                     else:
