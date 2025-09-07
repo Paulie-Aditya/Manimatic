@@ -1,7 +1,6 @@
 # Backend image
 FROM python:3.11-slim
 
-# Install build dependencies for Python packages
 RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
@@ -9,22 +8,19 @@ RUN apt-get update && apt-get install -y \
     libpango1.0-dev \
     ffmpeg \
     git \
+    curl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt gunicorn docker
+    && pip install --no-cache-dir -r requirements.txt gunicorn google-cloud-run
 
-# Copy backend code
 COPY . .
 
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
 
-# CMD ["gunicorn", "--bind", "0.0.0.0:${PORT}", "app:app"]
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT app:app"]
-

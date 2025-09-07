@@ -1,7 +1,6 @@
 # Worker image just for rendering Manim
 FROM python:3.11-slim
 
-# Install system deps required for Manim
 RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
@@ -16,12 +15,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /job
 
-# Install Python dependencies (use a smaller requirements-worker.txt if possible)
 COPY requirements.txt .
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt manim
 
-# Copy entrypoint script
 COPY worker_entrypoint.py /job/worker_entrypoint.py
 
 CMD ["python", "/job/worker_entrypoint.py"]
