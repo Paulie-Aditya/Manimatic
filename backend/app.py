@@ -16,15 +16,22 @@ CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True,
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 job_store={}
-client = docker.from_env()
+# client = docker.from_env()
+
+@app.route("/")
+def root():
+    return {"status": "ok"}, 200
 
 @app.route("/ping", methods= ["GET"])
 def ping():
     return jsonify({"message": "Pinged"}),200
 
-@app.route("/", methods=["GET"])
-def hello():
-    return jsonify({"message": "Hello World"})
+client = None
+if os.environ.get("ENABLE_DOCKER", "false").lower() == "true":
+    try:
+        client = docker.from_env()
+    except Exception as e:
+        print(f"[WARN] Docker client could not be initialized: {e}")
 
 def run_generation_thread(user_prompt, job_id):
     try:
